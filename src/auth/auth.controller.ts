@@ -1,18 +1,14 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  SetMetadata,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
+import { Auth } from './decorators/auth.decorator';
 import { GetUser } from './decorators/get-user.decorator';
+import { RoleProtected } from './decorators/role-protected.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { User } from './entities/user.entity';
 import { UserRoleGuard } from './guards/user-role.guard';
+import { validRoles } from './interface/valid-roles';
 
 @Controller('auth')
 export class AuthController {
@@ -27,6 +23,11 @@ export class AuthController {
   login(@Body() dto: LoginUserDto) {
     return this.authService.login(dto);
   }
+  @Get('check-auth-status')
+  @Auth()
+  checkAuthStatus(@GetUser() user: User) {
+    return this.authService.checkAuthStatus(user);
+  }
 
   @Get('me')
   @UseGuards(AuthGuard())
@@ -40,11 +41,21 @@ export class AuthController {
       userEmail,
     };
   }
+  // @SetMetadata('roles', ['admin', 'user'])
 
   @Get('me2')
-  @SetMetadata('roles', ['admin', 'user'])
+  @RoleProtected(validRoles.admin, validRoles.user)
   @UseGuards(AuthGuard(), UserRoleGuard)
   testingPrivateRoute2(@GetUser() user: User) {
+    return {
+      message: 'This is a private route',
+      user,
+    };
+  }
+
+  @Get('me3')
+  @Auth(validRoles.admin, validRoles.user)
+  testingPrivateRoute3(@GetUser() user: User) {
     return {
       message: 'This is a private route',
       user,
